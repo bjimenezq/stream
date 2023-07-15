@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cine Online</title>
+    <link rel="stylesheet" href="main.css">
+</head>
+<body>
+    <div id="video-container">
+        <video id="movie" controls muted></video>
+        <div id="controls-container">
+            <label for="video-file">Seleccionar video</label>
+            <input type="file" id="video-file" accept="video/*">
+            <button id="play-btn">Reproducir</button>
+            <button id="pause-btn">Pausar</button>
+        </div>
+    </div>
+
+   
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const videoElement = document.getElementById('movie');
+        const videoFileInput = document.getElementById('video-file');
+        const playButton = document.getElementById('play-btn');
+        const pauseButton = document.getElementById('pause-btn');
+        const loginForm = document.getElementById('login-form');
+
+        let isPlaying = false;
+        let seeking = false;
+
+        videoFileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const videoURL = URL.createObjectURL(file);
+                socket.emit('video:load', videoURL);
+            }
+        });
+
+        playButton.addEventListener('click', () => {
+            socket.emit('video:play');
+        });
+
+        pauseButton.addEventListener('click', () => {
+            socket.emit('video:pause');
+        });
+
+        videoElement.addEventListener('seeking', () => {
+            if (!seeking) {
+                seeking = true;
+                const currentTime = videoElement.currentTime;
+                socket.emit('video:seek', currentTime);
+            }
+        });
+
+        videoElement.addEventListener('seeked', () => {
+            if (seeking) {
+                seeking = false;
+            }
+        });
+
+        socket.on('video:load', (videoURL, currentTime) => {
+            videoElement.pause();
+            videoElement.src = videoURL;
+            videoElement.load();
+            videoElement.currentTime = currentTime;
+            if (isPlaying) {
+                videoElement.play();
+            }
+        });
+
+        socket.on('video:play', () => {
+            videoElement.play();
+            isPlaying = true;
+        });
+
+        socket.on('video:pause', () => {
+            videoElement.pause();
+            isPlaying = false;
+        });
+
+        socket.on('video:seek', (currentTime) => {
+            if (!seeking) {
+                videoElement.currentTime = currentTime;
+            }
+        });
+
+       
+    </script>
+</body>
+</html>
